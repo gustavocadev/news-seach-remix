@@ -1,6 +1,6 @@
 import { withEmotionCache } from '@emotion/react';
 import { unstable_useEnhancedEffect as useEnhancedEffect } from '@mui/material';
-import type { MetaFunction } from '@remix-run/node';
+import { json, MetaFunction } from '@remix-run/node';
 import {
   Links,
   LiveReload,
@@ -8,10 +8,13 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
 } from '@remix-run/react';
 import { useContext } from 'react';
 import ClientStyleContext from './ClientStyleContext';
+import { NewsProvider } from './context/news';
 import theme from './theme/theme';
+import type { LoaderArgs } from '@remix-run/node';
 
 interface DocumentProps {
   children: React.ReactNode;
@@ -23,6 +26,13 @@ export const meta: MetaFunction = () => ({
   title: 'New Remix App',
   viewport: 'width=device-width,initial-scale=1',
 });
+export async function loader(args: LoaderArgs) {
+  return json({
+    ENV: {
+      API_KEY: process.env.API_KEY,
+    },
+  });
+}
 
 const Document = withEmotionCache(
   ({ children, title }: DocumentProps, emotionCache) => {
@@ -44,6 +54,8 @@ const Document = withEmotionCache(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // envs
+    const data = useLoaderData<typeof loader>();
     return (
       <html lang="en">
         <head>
@@ -65,6 +77,11 @@ const Document = withEmotionCache(
         <body>
           {children}
           <ScrollRestoration />
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `window.ENV = ${JSON.stringify(data.ENV)}`,
+            }}
+          />
           <Scripts />
           <LiveReload />
         </body>
@@ -75,7 +92,9 @@ const Document = withEmotionCache(
 export default function App() {
   return (
     <Document>
-      <Outlet />
+      <NewsProvider>
+        <Outlet />
+      </NewsProvider>
     </Document>
   );
 }
